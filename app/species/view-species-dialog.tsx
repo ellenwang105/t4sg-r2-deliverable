@@ -13,6 +13,7 @@ import type { Database } from "@/lib/schema";
 import Image from "next/image";
 import { useState } from "react";
 import EditSpeciesDialog from "./edit-species-dialog";
+import SpeciesComments from "./species-comments";
 
 type Species = Database["public"]["Tables"]["species"]["Row"];
 
@@ -77,6 +78,7 @@ export default function ViewSpeciesDialog({ species, open, onOpenChange, userId 
                 </div>
               )}
             </div>
+            <SpeciesComments speciesId={species.id} userId={userId} />
             <div className="flex justify-end gap-2">
               {isAuthor && (
                 <Button
