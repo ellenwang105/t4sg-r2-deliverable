@@ -18,17 +18,8 @@ export const env = createEnv({
    */
   client: {
     // NEXT_PUBLIC_CLIENTVAR: z.string().min(1),
-    NEXT_PUBLIC_SUPABASE_URL: z
-      .string()
-      .min(1, "NEXT_PUBLIC_SUPABASE_URL is required")
-      .transform((s) => s.trim())
-      .refine((s) => s.startsWith("https://") && s.length > 10, {
-        message: "NEXT_PUBLIC_SUPABASE_URL must be a valid HTTPS URL",
-      }),
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: z
-      .string()
-      .min(1, "NEXT_PUBLIC_SUPABASE_ANON_KEY is required")
-      .transform((s) => s.trim()),
+    NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string(),
   },
 
   /**
@@ -44,8 +35,7 @@ export const env = createEnv({
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation.
-   * Skip on Vercel so the build succeeds; env vars are injected at build/runtime from the dashboard.
+   * This is especially useful for Docker builds.
    */
-  skipValidation:
-    !!process.env.SKIP_ENV_VALIDATION || process.env.VERCEL === "1",
+  skipValidation: !!process.env.SKIP_ENV_VALIDATION,
 });
