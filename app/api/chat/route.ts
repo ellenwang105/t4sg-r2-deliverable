@@ -2,9 +2,11 @@
 import { generateResponse } from "@/lib/services/species-chat";
 import { NextResponse } from "next/server";
 
+type ChatRequestBody = { message?: unknown };
+
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const body = (await request.json()) as ChatRequestBody;
 
     if (!body || typeof body.message !== "string" || body.message.trim().length === 0) {
       return NextResponse.json({ error: "Invalid or missing message" }, { status: 400 });
