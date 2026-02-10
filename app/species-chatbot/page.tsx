@@ -1,13 +1,16 @@
 /* eslint-disable */
 "use client";
 import { TypographyH2, TypographyP } from "@/components/ui/typography";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 
 export default function SpeciesChatbot() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
   const [message, setMessage] = useState("");
   const [chatLog, setChatLog] = useState<{ role: "user" | "bot"; content: string }[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
   const handleInput = () => {
     const textarea = textareaRef.current;
     if (textarea) {
@@ -16,11 +19,47 @@ export default function SpeciesChatbot() {
     }
   };
 
-const handleSubmit = async () => {
-  // TODO: Implement this function
-}
+  const handleSubmit = async () => {
+    const trimmed = message.trim();
+    if (!trimmed || isLoading) return;
 
-return (
+    const userMsg = { role: "user" as const, content: trimmed };
+    setChatLog((prev) => [...prev, userMsg]);
+    setMessage("");
+    if (textareaRef.current) textareaRef.current.style.height = "auto";
+    setIsLoading(true);
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: trimmed }),
+      });
+
+      if (!res.ok) {
+        const err = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(err.error ?? "Failed to get response");
+      }
+
+      const data = (await res.json()) as { response?: string };
+      if (!data.response) throw new Error("No response from server");
+      setChatLog((prev) => [...prev, { role: "bot" as const, content: data.response! }]);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "An error occurred";
+      setChatLog((prev) => [
+        ...prev,
+        { role: "bot" as const, content: `I apologize, but I encountered an error: ${msg}. Please try again.` },
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    chatContainerRef.current?.scrollTo(0, chatContainerRef.current.scrollHeight);
+  }, [chatLog]);
+
+  return (
     <>
       <TypographyH2>Species Chatbot</TypographyH2>
       <div className="mt-4 flex gap-4">
@@ -40,7 +79,7 @@ return (
       {/* Chat UI, ChatBot to be implemented */}
       <div className="mx-auto mt-6">
         {/* Chat history */}
-        <div className="h-[400px] space-y-3 overflow-y-auto rounded-lg border border-border bg-muted p-4">
+        <div ref={chatContainerRef} className="h-[400px] space-y-3 overflow-y-auto rounded-lg border border-border bg-muted p-4">
           {chatLog.length === 0 ? (
             <p className="text-sm text-muted-foreground">Start chatting about a species!</p>
           ) : (
@@ -66,16 +105,24 @@ return (
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onInput={handleInput}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                void handleSubmit();
+              }
+            }}
             rows={1}
             placeholder="Ask about a species..."
-            className="w-full resize-none overflow-hidden rounded border border-border bg-background p-2 text-sm text-foreground focus:outline-none"
+            disabled={isLoading}
+            className="w-full resize-none overflow-hidden rounded border border-border bg-background p-2 text-sm text-foreground focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
           />
           <button
             type="button"
             onClick={() => void handleSubmit()}
-            className="mt-2 rounded bg-primary px-4 py-2 text-background transition hover:opacity-90"
+            disabled={isLoading || !message.trim()}
+            className="mt-2 rounded bg-primary px-4 py-2 text-background transition hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Enter
+            {isLoading ? "Sending..." : "Enter"}
           </button>
         </div>
       </div>
