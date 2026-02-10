@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/use-toast";
 import { createBrowserSupabaseClient } from "@/lib/client-utils";
 import type { Database } from "@/lib/schema";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 type Comment = Database["public"]["Tables"]["species_comments"]["Row"] & {
@@ -31,12 +31,7 @@ export default function SpeciesComments({ speciesId, userId }: SpeciesCommentsPr
 
   const supabase = createBrowserSupabaseClient();
 
-  // Fetch comments when component mounts or speciesId changes
-  useEffect(() => {
-    void fetchComments();
-  }, [speciesId]);
-
-  const fetchComments = async () => {
+  const fetchComments = useCallback(async () => {
     setIsLoading(true);
     // First, fetch comments
     const { data: commentsData, error: commentsError } = await supabase
@@ -74,7 +69,7 @@ export default function SpeciesComments({ speciesId, userId }: SpeciesCommentsPr
       // Combine comments with profile data
       const commentsWithProfiles = commentsData.map((comment) => ({
         ...comment,
-        author_profile: profilesData?.find((p) => p.id === comment.author) || null,
+        author_profile: profilesData?.find((p) => p.id === comment.author) ?? null,
       }));
 
       setComments(commentsWithProfiles);
@@ -82,7 +77,12 @@ export default function SpeciesComments({ speciesId, userId }: SpeciesCommentsPr
       setComments([]);
     }
     setIsLoading(false);
-  };
+  }, [speciesId, supabase]);
+
+  // Fetch comments when component mounts or speciesId changes
+  useEffect(() => {
+    void fetchComments();
+  }, [fetchComments]);
 
   const handleSubmitComment = async () => {
     if (!newComment.trim()) {
@@ -200,7 +200,7 @@ export default function SpeciesComments({ speciesId, userId }: SpeciesCommentsPr
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <p className="font-semibold">{comment.author_profile?.display_name || "Unknown User"}</p>
+                      <p className="font-semibold">{comment.author_profile?.display_name ?? "Unknown User"}</p>
                       <span className="text-xs text-muted-foreground">{formatDate(comment.created_at)}</span>
                     </div>
                     <p className="mt-2 whitespace-pre-wrap">{comment.content}</p>
